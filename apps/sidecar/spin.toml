@@ -1,0 +1,18 @@
+spin_manifest_version = 2
+
+[application]
+name = "sidecar"
+version = "0.1.0"
+authors = ["jiaxiao zhou <duibao55328@gmail.com>"]
+description = "explore sidecar container"
+
+[[trigger.http]]
+route = "/..."
+component = "sidecar"
+
+[component.sidecar]
+source = "target/wasm32-wasi/release/sidecar.wasm"
+allowed_outbound_hosts = ["http://*:*"]
+[component.sidecar.build]
+command = "cargo build --target wasm32-wasi --release"
+watch = ["src/**/*.rs", "Cargo.toml"]

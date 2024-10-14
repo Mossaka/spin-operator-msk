@@ -1,0 +1,13 @@
+apiVersion: core.spinoperator.dev/v1alpha1
+kind: SpinApp
+metadata:
+  name: simple-spinapp
+spec:
+  image: "ttl.sh/sidecar3:2h"
+  replicas: 1
+  executor: containerd-shim-spin
+  containers:
+    - name: nginx
+      image: docker.io/nginx:latest
+      ports:
+        - containerPort: 88
