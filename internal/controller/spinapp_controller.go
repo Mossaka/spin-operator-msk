@@ -437,9 +437,35 @@ func constructDeployment(ctx context.Context, app *spinv1alpha1.SpinApp, config 
 
 	labels := constructAppLabels(app)
 
-	var container corev1.Container
+	var containers []corev1.Container
+	if len(app.Spec.Containers) > 0 {
+		for _, c := range app.Spec.Containers {
+			if c.Image == app.Spec.Image {
+				return nil, errors.New("container in app.Spec.Containers must have a different image than Spin App")
+			}
+			if c.Name == "" {
+				return nil, errors.New("container in app.Spec.Containers must have a name")
+			}
+			if c.Name == app.Name {
+				return nil, errors.New("container in app.Spec.Containers must have a different name than the Spin App")
+			}
+			c.Env = append(c.Env, env...)
+			c.VolumeMounts = append(c.VolumeMounts, volumeMounts...)
+			if c.Resources.Limits == nil && c.Resources.Requests == nil {
+				c.Resources = resources
+			}
+			if c.LivenessProbe == nil {
+				c.LivenessProbe = livenessProbe
+			}
+			if c.ReadinessProbe == nil {
+				c.ReadinessProbe = readinessProbe
+			}
+			containers = append(containers, c)
+		}
+	}
+
 	if config.RuntimeClassName != nil {
-		container = corev1.Container{
+		container := corev1.Container{
 			Name:    app.Name,
 			Image:   app.Spec.Image,
 			Command: []string{"/"},
@@ -453,8 +479,9 @@ func constructDeployment(ctx context.Context, app *spinv1alpha1.SpinApp, config 
 			LivenessProbe:  livenessProbe,
 			ReadinessProbe: readinessProbe,
 		}
+		containers = append(containers, container)
 	} else if config.SpinImage != nil {
-		container = corev1.Container{
+		container := corev1.Container{
 			Name:  app.Name,
 			Image: *config.SpinImage,
 			Args:  []string{"up", "--listen", fmt.Sprintf("0.0.0.0:%d", spinapp.DefaultHTTPPort), "-f", app.Spec.Image, "--runtime-config-file", "/runtime-config.toml"},
@@ -468,6 +495,7 @@ func constructDeployment(ctx context.Context, app *spinv1alpha1.SpinApp, config 
 			LivenessProbe:  livenessProbe,
 			ReadinessProbe: readinessProbe,
 		}
+		containers = append(containers, container)
 	} else {
 		return nil, errors.New("must specify either runtimeClassName or spinImage")
 	}
@@ -495,7 +523,7 @@ func constructDeployment(ctx context.Context, app *spinv1alpha1.SpinApp, config 
 				},
 				Spec: corev1.PodSpec{
 					RuntimeClassName: config.RuntimeClassName,
-					Containers:       []corev1.Container{container},
+					Containers:       containers,
 					ImagePullSecrets: app.Spec.ImagePullSecrets,
 					Volumes:          volumes,
 				},

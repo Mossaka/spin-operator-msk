@@ -32,6 +32,13 @@ type SpinAppSpec struct {
 	// will be chosen. If no executors are available then no default will be set.
 	Executor string `json:"executor"`
 
+	// Containers defines the list of sidecar containers to be included in the deployment.
+	//
+	// These containers will not include the main Spin App. They share the Spin App's
+	// environment variables and volumes.
+	// +kubebuilder:validation:Optional
+	Containers []corev1.Container `json:"containers,omitempty"`
+
 	// Image is the source for this app.
 	//
 	// +kubebuilder:validation:Required
